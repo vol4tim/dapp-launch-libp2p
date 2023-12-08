@@ -10,7 +10,8 @@
 import { useDevices } from "@/hooks/useDevices";
 import { useIpfs } from "@/hooks/useIpfs";
 import { useRobonomics } from "@/hooks/useRobonomics";
-import { useSend } from "@/hooks/useSend";
+// import { useSend } from "@/hooks/useSend";
+import { connect, request, start } from "@/utils/libp2p/libp2p";
 import {
   decryptMsg,
   getConfigCid,
@@ -18,7 +19,7 @@ import {
   parseJson
 } from "@/utils/telemetry";
 import { Keyring } from "@polkadot/keyring";
-import { stringToU8a } from "@polkadot/util";
+// import { stringToU8a } from "@polkadot/util";
 import { onUnmounted, reactive, ref, watch, watchEffect } from "vue";
 import { useStore } from "vuex";
 
@@ -34,7 +35,7 @@ export default {
     const robonomics = useRobonomics();
     const store = useStore();
     const ipfs = useIpfs();
-    const transaction = useSend();
+    // const transaction = useSend();
     const devices = useDevices();
 
     const notify = (text, timeout = 3000) => {
@@ -234,6 +235,41 @@ export default {
         );
         if (result) {
           config.value = result;
+
+          // ================================
+
+          const node = await start();
+          try {
+            await connect(
+              `/dns4/vol4.work.gd/tcp/443/wss/p2p/12D3KooWEmZfGh3HEy7rQPKZ8DpJRYfFcbULN97t3hGwkB5xPmjn/p2p-circuit/p2p/${result.peer_id}`
+            );
+            node.services.ha.handle("/update", async (result, stream) => {
+              try {
+                const seed = decryptMsg(
+                  result[setup.controller.address],
+                  setup.controller.publicKey,
+                  setup.controller
+                );
+                const admin = keyring.addFromUri(seed, {}, "ed25519");
+                const data = decryptMsg(
+                  result.data,
+                  setup.controller.publicKey,
+                  admin
+                );
+                datalog.value = parseJson(data);
+              } catch (error) {
+                console.log(error.message);
+              }
+              await node.services.ha.utils.sendResponse(stream, {
+                result: true
+              });
+            });
+          } catch (error) {
+            console.log(error);
+          }
+
+          // ================================
+
           notify("Config loaded");
           logger(JSON.stringify(config.value));
         } else {
@@ -252,6 +288,7 @@ export default {
       );
     };
     const launch = async (command) => {
+      console.log(command.launch.params.entity_id, command.tx.tx_status);
       if (command.tx.tx_status !== "pending") {
         return;
       }
@@ -271,57 +308,63 @@ export default {
         return;
       }
 
-      if (!ipfs.isAuth()) {
-        notify(`Authorization on ipfs node`);
-        try {
-          const signature = (
-            await robonomics.accountManager.account.signMsg(
-              stringToU8a(robonomics.accountManager.account.address)
-            )
-          ).toString();
-          ipfs.auth(
-            setup.admin,
-            robonomics.accountManager.account.address,
-            signature
-          );
-        } catch (error) {
-          if (error.message === "Cancelled") {
-            setStatusLaunch(command, "declined");
-          } else {
-            logger(error);
-            setStatusLaunch(command, "error");
-          }
-          return;
-        }
-        setStatusLaunch(command, "approved");
-      }
+      const response = await request(command.launch);
+      console.log(response);
 
-      let cid;
-      try {
-        cid = await ipfs.add(JSON.stringify(command.launch));
-      } catch (error) {
-        setStatusLaunch(command, "error");
-        notify(`Error: ${error.message}`);
-        return;
-      }
-      logger(`launch ipfs file ${cid.path}`);
+      setStatusLaunch(command, "success");
 
-      notify(`Send launch`);
-      const call = robonomics.launch.send(setup.controller.address, cid.path);
-      const tx = transaction.createTx();
-      await transaction.send(tx, call, setup.admin);
-      if (tx.error.value) {
-        if (tx.error.value !== "Cancelled") {
-          setStatusLaunch(command, "error");
-          notify(`Error: ${tx.error.value}`);
-        } else {
-          setStatusLaunch(command, "declined");
-          notify("Calcel");
-        }
-      } else {
-        setStatusLaunch(command, "success");
-        notify("Launch sended");
-      }
+      // if (!ipfs.isAuth()) {
+      //   notify(`Authorization on ipfs node`);
+      //   try {
+      //     const signature = (
+      //       await robonomics.accountManager.account.signMsg(
+      //         stringToU8a(robonomics.accountManager.account.address)
+      //       )
+      //     ).toString();
+      //     ipfs.auth(
+      //       setup.admin,
+      //       robonomics.accountManager.account.address,
+      //       signature
+      //     );
+      //   } catch (error) {
+      //     if (error.message === "Cancelled") {
+      //       setStatusLaunch(command, "declined");
+      //     } else {
+      //       logger(error);
+      //       setStatusLaunch(command, "error");
+      //     }
+      //     return;
+      //   }
+      //   setStatusLaunch(command, "approved");
+      // }
+
+      // let cid;
+      // try {
+      //   cid = await ipfs.add(JSON.stringify(command.launch));
+      // } catch (error) {
+      //   setStatusLaunch(command, "error");
+      //   notify(`Error: ${error.message}`);
+      //   return;
+      // }
+      // logger(`launch ipfs file ${cid.path}`);
+
+      // notify(`Send launch`);
+      // const call = robonomics.launch.send(setup.controller.address, cid.path);
+      // const tx = transaction.createTx();
+      // await transaction.send(tx, call, setup.admin);
+      // if (tx.error.value) {
+      //   if (tx.error.value !== "Cancelled") {
+      //     setStatusLaunch(command, "error");
+      //     notify(`Error: ${tx.error.value}`);
+      //   } else {
+      //     setStatusLaunch(command, "declined");
+      //     notify("Calcel");
+      //   }
+      // } else {
+      //   console.log(command);
+      //   setStatusLaunch(command, "success");
+      //   notify("Launch sended");
+      // }
     };
 
     watch(
