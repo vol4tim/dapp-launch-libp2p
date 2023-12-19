@@ -54,22 +54,22 @@ export default {
 
     let unsubscribeDatalog;
     const watchDatalog = async () => {
-      unsubscribeDatalog = await robonomics.datalog.on(
-        { method: "NewRecord" },
-        (results) => {
-          const r = results.filter((item) => {
-            return (
-              item.success &&
-              item.data[0].toHuman() === setup.controller.address
-            );
-          });
-          for (const item of r) {
-            console.log(item.data[1].toString(), item.data[2].toHuman());
-            updateTime.value = item.data[1].toNumber();
-            datalogCid.value = item.data[2].toHuman();
-          }
-        }
-      );
+      // unsubscribeDatalog = await robonomics.datalog.on(
+      //   { method: "NewRecord" },
+      //   (results) => {
+      //     const r = results.filter((item) => {
+      //       return (
+      //         item.success &&
+      //         item.data[0].toHuman() === setup.controller.address
+      //       );
+      //     });
+      //     for (const item of r) {
+      //       console.log(item.data[1].toString(), item.data[2].toHuman());
+      //       updateTime.value = item.data[1].toNumber();
+      //       datalogCid.value = item.data[2].toHuman();
+      //     }
+      //   }
+      // );
     };
 
     onUnmounted(() => {
@@ -203,9 +203,9 @@ export default {
           datalogCid.value
         );
         if (result) {
-          datalog.value = result;
-          notify("Datalog loaded");
-          logger(JSON.stringify(datalog.value));
+          // datalog.value = result;
+          // notify("Datalog loaded");
+          // logger(JSON.stringify(datalog.value));
 
           if (!configCid.value) {
             logger(`twin id ${result.twin_id}`);
@@ -244,7 +244,8 @@ export default {
               `/dns4/libp2p-relay.robonomics.network/tcp/443/wss/p2p/12D3KooWEmZfGh3HEy7rQPKZ8DpJRYfFcbULN97t3hGwkB5xPmjn/p2p-circuit/p2p/${result.peer_id}`
               // `/dns4/vol4.work.gd/tcp/443/wss/p2p/12D3KooWEmZfGh3HEy7rQPKZ8DpJRYfFcbULN97t3hGwkB5xPmjn/p2p-circuit/p2p/${result.peer_id}`
             );
-            node.services.ha.handle("/update", async (result, stream) => {
+            node.services.ha.handle("/update", async (data, stream) => {
+              const result = JSON.parse(data);
               try {
                 const seed = decryptMsg(
                   result[setup.controller.address],
