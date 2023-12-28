@@ -7,8 +7,8 @@ import RwsSetupsList from "./views/RwsSetupsList.vue";
 import RwsUserSetup from "./views/RwsUserSetup.vue";
 import RwsUsersList from "./views/RwsUsersList.vue";
 import Services from "./views/Services.vue";
-import Telemetry from "./views/Telemetry.vue";
 import HaSetup from "./views/haSetup/Page.vue";
+import Telemetry from "./views/telemetry/Telemetry.vue";
 
 const routes = [
   {
