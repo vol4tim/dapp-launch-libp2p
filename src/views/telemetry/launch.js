@@ -70,7 +70,7 @@ export const useData = () => {
   const run = async () => {
     const datalog = await getLastDatalog(robonomics, controller.value.address);
     cid.value = datalog.cid;
-    updateTime.value = datalog.updateTime;
+    updateTime.value = datalog.timestamp;
     watchDatalog();
   };
 

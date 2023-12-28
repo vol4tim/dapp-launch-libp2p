@@ -14,6 +14,7 @@ import {
 
 export const useData = () => {
   const data = ref(null);
+  const updateTime = ref(null);
 
   const store = useStore();
   const robonomics = useRobonomics();
@@ -49,6 +50,7 @@ export const useData = () => {
         );
         if (result) {
           data.value = result;
+          updateTime.value = Date.now();
           await node.services.ha.utils.sendResponse(stream, {
             result: true
           });
@@ -89,5 +91,5 @@ export const useData = () => {
     setStatusLaunch(store, command, "success");
   };
 
-  return { data, run, launch };
+  return { data, updateTime, run, launch };
 };

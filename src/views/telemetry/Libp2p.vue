@@ -17,8 +17,7 @@ export default {
   },
   emits: ["error"],
   setup(props, { emit }) {
-    const updateTime = "";
-    const { data, run, launch } = useData();
+    const { data, updateTime, run, launch } = useData();
 
     if (props.config.peer_id) {
       (async () => {
