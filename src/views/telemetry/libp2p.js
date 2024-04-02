@@ -58,13 +58,13 @@ export const useData = () => {
       node.services.ha.handle("/update", async (dataRaw, stream) => {
         console.log("dataRaw", dataRaw);
         const result = await decryptMsgContoller(
-          JSON.parse(dataRaw),
+          dataRaw,
           controller.value,
           keyring
         );
         if (result) {
           console.log("result", result);
-          data.value = result.data.data;
+          data.value = result;
           updateTime.value = Date.now();
           await node.services.ha.utils.sendResponse(stream, {
             result: true
