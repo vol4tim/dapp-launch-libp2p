@@ -14,6 +14,12 @@ window.Buffer = Buffer;
 
 const app = createApp(App);
 
+// app.config.errorHandler = (err, vm, info) => {
+//   console.log(err);
+//   console.log(vm);
+//   console.log(info);
+// };
+
 app
   .use(router)
   .use(store)

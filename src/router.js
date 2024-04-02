@@ -3,11 +3,8 @@ import Home from "./views/Home.vue";
 import PathNotFound from "./views/PathNotFound.vue";
 import RwsActivate from "./views/RwsActivate.vue";
 import RwsSetup from "./views/RwsSetup.vue";
-import RwsSetupsList from "./views/RwsSetupsList.vue";
-import RwsUserSetup from "./views/RwsUserSetup.vue";
-import RwsUsersList from "./views/RwsUsersList.vue";
+import RwsSetupNew from "./views/RwsSetupNew.vue";
 import Services from "./views/Services.vue";
-import HaSetup from "./views/haSetup/Page.vue";
 import Telemetry from "./views/telemetry/Telemetry.vue";
 
 const routes = [
@@ -16,15 +13,15 @@ const routes = [
     name: "Home",
     component: Home,
     meta: {
-      title: "Dashboard"
+      title: "Home"
     }
   },
   {
-    path: "/rws-activate",
+    path: "/rws-buy",
     name: "rwsActivate",
     component: RwsActivate,
     meta: {
-      title: "RWS activation"
+      title: "Buy a Subscription"
     }
   },
   {
@@ -32,31 +29,15 @@ const routes = [
     name: "rwsSetup",
     component: RwsSetup,
     meta: {
-      title: "RWS setup"
+      title: "Setup a Subscription"
     }
   },
   {
-    path: "/rws-setups-list",
-    name: "rwsSetupsList",
-    component: RwsSetupsList,
+    path: "/rws-setup-new",
+    name: "rwsSetupNew",
+    component: RwsSetupNew,
     meta: {
-      title: "Your RWS setups"
-    }
-  },
-  {
-    path: "/rws-user-setup",
-    name: "rwsUserSetup",
-    component: RwsUserSetup,
-    meta: {
-      title: "RWS add user"
-    }
-  },
-  {
-    path: "/rws-users-list",
-    name: "rwsUsersList",
-    component: RwsUsersList,
-    meta: {
-      title: "Users in your RWS"
+      title: "New Subscription setup"
     }
   },
   {
@@ -64,15 +45,7 @@ const routes = [
     name: "telemetry",
     component: Telemetry,
     meta: {
-      title: "Smart devices"
-    }
-  },
-  {
-    path: "/hasetup",
-    name: "haSetup",
-    component: HaSetup,
-    meta: {
-      title: "HA setup"
+      title: "Devices control panel"
     }
   },
   {

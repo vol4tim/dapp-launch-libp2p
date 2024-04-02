@@ -1,12 +1,8 @@
 import { useIpfs } from "@/hooks/useIpfs";
 import { useRobonomics } from "@/hooks/useRobonomics";
-import {
-  decryptMsg,
-  getConfigCid,
-  getLastDatalog,
-  parseJson
-} from "@/utils/telemetry";
-import { Keyring } from "@polkadot/keyring";
+import { createPair, encryptor } from "@/utils/encryptor";
+import { getConfigCid, getLastDatalog, parseJson } from "@/utils/telemetry";
+import { hexToU8a, u8aToString } from "@polkadot/util";
 import { ref, watch } from "vue";
 import { useStore } from "vuex";
 
@@ -37,21 +33,20 @@ const catFile = async (store, ipfs, cid) => {
   return false;
 };
 
-export const decryptMsgContoller = async (
-  encryptedMsg,
-  controller,
-  keyring
-) => {
+export const decryptMsgContoller = async (encryptedMsg, controller) => {
   if (encryptedMsg) {
     try {
-      const seed = decryptMsg(
-        encryptedMsg[controller.address],
-        controller.publicKey,
-        controller
+      const seed = controller.decryptMessage(
+        hexToU8a(encryptedMsg[controller.address]),
+        controller.pair.publicKey
       );
-      const admin = keyring.addFromUri(seed, {}, "ed25519");
-      const data = decryptMsg(encryptedMsg.data, controller.publicKey, admin);
-      return parseJson(data);
+
+      const admin = encryptor(createPair(u8aToString(seed)));
+      const data = admin.decryptMessage(
+        hexToU8a(encryptedMsg.data),
+        controller.pair.publicKey
+      );
+      return parseJson(u8aToString(data));
     } catch (error) {
       console.log(error.message);
     }
@@ -59,20 +54,14 @@ export const decryptMsgContoller = async (
   return false;
 };
 
-export const catFileController = async (
-  cid,
-  controller,
-  store,
-  ipfs,
-  keyring
-) => {
+export const catFileController = async (cid, controller, store, ipfs) => {
   if (cid) {
     const data = await catFile(store, ipfs, cid);
     if (!data) {
       console.log(`Error: ${cid} not found in ipfs`);
       return null;
     }
-    const result = await decryptMsgContoller(data, controller, keyring);
+    const result = await decryptMsgContoller(data, controller);
     if (result) {
       return result;
     } else {
@@ -82,27 +71,23 @@ export const catFileController = async (
   return null;
 };
 
-const loadSetup = (store, keyring) => {
-  if (!store.state.robonomicsUIvue.rws.active) {
-    return;
-  }
-  const setupRaw = store.state.robonomicsUIvue.rws.list.find(
-    (item) => item.owner === store.state.robonomicsUIvue.rws.active
-  );
-  if (setupRaw) {
-    try {
-      return {
-        controller: keyring.addFromUri(setupRaw.scontroller, {}, "ed25519"),
-        owner: setupRaw.owner
-      };
-    } catch (error) {
-      console.log(error);
+const loadSetup = (store) => {
+  if (store.state.robonomicsUIvue.rws.active) {
+    const setupRaw = store.state.robonomicsUIvue.rws.list.find(
+      (item) => item.owner === store.state.robonomicsUIvue.rws.active
+    );
+    if (setupRaw) {
+      try {
+        return {
+          controller: encryptor(createPair(setupRaw.scontroller)),
+          owner: setupRaw.owner
+        };
+      } catch (error) {
+        console.log(error);
+      }
     }
   }
-  return {
-    controller: null,
-    owner: null
-  };
+  return false;
 };
 
 export const useSetup = () => {
@@ -111,16 +96,14 @@ export const useSetup = () => {
 
   const store = useStore();
 
-  const keyring = new Keyring({
-    ss58Format: chainSS58
-  });
-
   watch(
     () => store.state.robonomicsUIvue.rws.active,
     () => {
-      const setup = loadSetup(store, keyring);
-      controller.value = setup.controller;
-      owner.value = setup.owner;
+      const setup = loadSetup(store);
+      if (setup) {
+        controller.value = setup.controller;
+        owner.value = setup.owner;
+      }
     },
     { immediate: true }
   );
@@ -153,28 +136,27 @@ export const useLastDatalog = () => {
   const robonomics = useRobonomics();
   const { controller } = useSetup();
 
-  const keyring = new Keyring({
-    ss58Format: chainSS58
-  });
-
   (async () => {
-    const datalog = await getLastDatalog(robonomics, controller.value.address);
-    cid.value = datalog.cid;
-    updateTime.value = datalog.timestamp;
-    data.value = await catFileController(
-      cid.value,
-      controller.value,
-      store,
-      ipfs,
-      keyring
-    );
+    if (controller.value) {
+      const datalog = await getLastDatalog(
+        robonomics,
+        controller.value.address
+      );
+      cid.value = datalog.cid;
+      updateTime.value = datalog.timestamp;
+      data.value = await catFileController(
+        cid.value,
+        controller.value,
+        store,
+        ipfs
+      );
+    }
   })();
 
   return { cid, updateTime, data };
 };
 
 export const useConfig = () => {
-  const cid = ref(null);
   const config = ref(null);
 
   const store = useStore();
@@ -182,44 +164,59 @@ export const useConfig = () => {
   const robonomics = useRobonomics();
   const { controller } = useSetup();
 
-  const keyring = new Keyring({
-    ss58Format: chainSS58
-  });
-
   (async () => {
-    notify(store, "Find twin id");
-    const datalog = await getLastDatalog(robonomics, controller.value.address);
-    const result = await catFileController(
-      datalog.cid,
-      controller.value,
-      store,
-      ipfs,
-      keyring
-    );
-
-    if (result) {
-      const twin_id = result.twin_id;
-      notify(store, `Twin id #${twin_id}`);
-
-      notify(store, `Start load config`);
-      cid.value = await getConfigCid(
-        robonomics,
-        controller.value.address,
-        twin_id
+    if (controller.value) {
+      const haconfig = localStorage.getItem(
+        `haconfig:${controller.value.address}`
       );
-
-      config.value = await catFileController(
-        cid.value,
+      if (haconfig) {
+        try {
+          config.value = JSON.parse(haconfig);
+        } catch (error) {
+          console.log(error);
+        }
+      }
+      notify(store, "Find twin id");
+      const datalog = await getLastDatalog(
+        robonomics,
+        controller.value.address
+      );
+      const result = await catFileController(
+        datalog.cid,
         controller.value,
         store,
-        ipfs,
-        keyring
+        ipfs
       );
-      notify(store, `Config loaded`);
-    } else {
-      notify(store, "Error: not found twin id");
+
+      if (result) {
+        const twin_id = result.twin_id;
+        notify(store, `Twin id #${twin_id}`);
+
+        notify(store, `Start load config`);
+        const cid = await getConfigCid(
+          robonomics,
+          controller.value.address,
+          twin_id
+        );
+
+        config.value = await catFileController(
+          cid,
+          controller.value,
+          store,
+          ipfs
+        );
+
+        localStorage.setItem(
+          `haconfig:${controller.value.address}`,
+          JSON.stringify(config.value)
+        );
+
+        notify(store, `Config loaded`);
+      } else {
+        notify(store, "Error: not found twin id");
+      }
     }
   })();
 
-  return { config, cid };
+  return { config };
 };

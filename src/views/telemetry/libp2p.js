@@ -1,8 +1,15 @@
 import { useDevices } from "@/hooks/useDevices";
 import { useRobonomics } from "@/hooks/useRobonomics";
-import { connect, request, start } from "@/utils/libp2p/libp2p";
+import {
+  connect,
+  disconnect,
+  getUriPeer,
+  request,
+  start
+} from "@/utils/libp2p/libp2p";
 import { Keyring } from "@polkadot/keyring";
-import { ref, watch } from "vue";
+import { u8aToHex } from "@polkadot/util";
+import { onUnmounted, ref, watch } from "vue";
 import { useStore } from "vuex";
 import {
   chainSS58,
@@ -33,15 +40,21 @@ export const useData = () => {
     ss58Format: chainSS58
   });
 
-  const run = async (peer_id) => {
+  onUnmounted(() => {
+    disconnect();
+  });
+
+  const run = async (peer_id, peer_address) => {
     const node = await start();
     try {
       notify(store, `Connect to peer id ${peer_id}`);
-      await connect(
-        `/dns4/libp2p-relay.robonomics.network/tcp/443/wss/p2p/12D3KooWEmZfGh3HEy7rQPKZ8DpJRYfFcbULN97t3hGwkB5xPmjn/p2p-circuit/p2p/${peer_id}`
-        // `/dns4/vol4.work.gd/tcp/443/wss/p2p/12D3KooWEmZfGh3HEy7rQPKZ8DpJRYfFcbULN97t3hGwkB5xPmjn/p2p-circuit/p2p/${result.peer_id}`
-      );
+      const uriPeer = await getUriPeer(peer_id, peer_address);
+      await connect(uriPeer);
       notify(store, `Connected`);
+      const protocols = node.getProtocols();
+      if (protocols.includes("/update")) {
+        await node.unhandle("/update");
+      }
       node.services.ha.handle("/update", async (dataRow, stream) => {
         const result = await decryptMsgContoller(
           JSON.parse(dataRow),
@@ -66,6 +79,25 @@ export const useData = () => {
     return false;
   };
 
+  const setAccountController = async () => {
+    const pair = robonomics.accountManager.keyring.keyring.addFromPair(
+      controller.value.pair
+    );
+    await robonomics.accountManager.setSender(pair.address, {
+      type: pair.type,
+      extension: null
+    });
+  };
+  const setAccountFromHeader = async () => {
+    const accountOld = store.state.robonomicsUIvue.polkadot.accounts.find(
+      (item) => item.address === store.state.robonomicsUIvue.polkadot.address
+    );
+    await robonomics.accountManager.setSender(accountOld.address, {
+      type: accountOld.type,
+      extension: store.state.robonomicsUIvue.polkadot.extensionObj
+    });
+  };
+
   const launch = async (command) => {
     console.log(command.launch.params.entity_id, command.tx.tx_status);
     if (command.tx.tx_status !== "pending") {
@@ -75,6 +107,8 @@ export const useData = () => {
     notify(store, `Launch command`);
     console.log(`command ${JSON.stringify(command)}`);
 
+    await setAccountController();
+
     if (
       robonomics.accountManager.account.address !==
         store.state.robonomicsUIvue.rws.active &&
@@ -82,13 +116,32 @@ export const useData = () => {
     ) {
       notify(store, `Error: You do not have access to device management.`);
       setStatusLaunch(store, command, "error");
+      await setAccountFromHeader();
       return;
     }
 
-    const response = await request(command.launch);
-    console.log(`response: ${response}`);
+    try {
+      const cmdString = JSON.stringify(command.launch);
+      const cmdCrypto = controller.value.encryptMessage(
+        cmdString,
+        controller.value.pair.publicKey
+      );
+      // commandCid = await ipfs.add(u8aToHex(cmdCrypto));
 
-    setStatusLaunch(store, command, "success");
+      console.log(u8aToHex(cmdCrypto));
+      console.log(command.launch);
+
+      const response = await request(u8aToHex(cmdCrypto));
+      // const response = await request(command.launch);
+      console.log(`response: ${response}`);
+
+      setStatusLaunch(store, command, "success");
+    } catch (error) {
+      console.log(error);
+      notify(store, `Error: Check status of the HomeAssistant.`);
+      setStatusLaunch(store, command, "error");
+    }
+    await setAccountFromHeader();
   };
 
   return { data, updateTime, run, launch };
