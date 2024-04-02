@@ -1,12 +1,5 @@
 <template>
-  <div style="text-align: right">
-    <robo-button
-      @click="type = 'libp2p'"
-      :disabled="type === 'libp2p'"
-      size="small"
-    >
-      Libp2p
-    </robo-button>
+  <div class="temp_toggler">
     <robo-button
       @click="type = 'launch'"
       :disabled="type === 'launch'"
@@ -14,16 +7,16 @@
     >
       Parachain
     </robo-button>
+    <robo-button
+      @click="type = 'libp2p'"
+      :disabled="type === 'libp2p'"
+      size="small"
+    >
+      Libp2p
+    </robo-button>
   </div>
-  <template v-if="config">
-    <Libp2p v-if="type === 'libp2p'" :config="config" @error="error" />
-    <Launch v-else :config="config" />
-  </template>
-  <robo-layout-section v-else>
-    <robo-layout-section gcenter>
-      <robo-loader size="2" />
-    </robo-layout-section>
-  </robo-layout-section>
+  <Libp2p v-if="type === 'libp2p'" :config="config" @error="error" />
+  <Launch v-else :config="config" />
 </template>
 
 <script>
@@ -34,7 +27,7 @@ import { useConfig } from "./common";
 
 export default {
   setup() {
-    const type = ref("libp2p");
+    const type = ref(localStorage.getItem("typeTelemetry") || "launch");
     const { config } = useConfig();
 
     watch([config, type], () => {
@@ -43,6 +36,10 @@ export default {
         console.log(config.value);
         type.value = "launch";
       }
+    });
+
+    watch(type, () => {
+      localStorage.setItem("typeTelemetry", type.value);
     });
 
     return {
@@ -56,3 +53,12 @@ export default {
   components: { Libp2p, Launch }
 };
 </script>
+
+<style scoped>
+.temp_toggler {
+  position: absolute;
+  top: calc(var(--robo-space) * 8);
+  right: var(--robo-space);
+  z-index: 10;
+}
+</style>

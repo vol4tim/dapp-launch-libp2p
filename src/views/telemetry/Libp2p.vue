@@ -19,17 +19,32 @@ export default {
   setup(props, { emit }) {
     const { data, updateTime, run, launch } = useData();
 
-    if (props.config.peer_id) {
-      (async () => {
-        const result = await run(props.config.peer_id);
-        if (!result) {
+    watch(
+      () => ({ ...props.config }),
+      (newValue, oldValue) => {
+        if (newValue && newValue.peer_id) {
+          if (
+            !oldValue ||
+            (oldValue.peer_id && newValue.peer_id !== oldValue.peer_id)
+          ) {
+            (async () => {
+              const result = await run(
+                newValue.peer_id,
+                newValue.local_libp2p_multiaddress
+              );
+              if (!result) {
+                emit("error");
+              }
+            })();
+          }
+        } else {
+          console.log(`Error: not peer_id`);
+          console.log(props.config);
           emit("error");
         }
-      })();
-    } else {
-      console.log(`Error: not peer_id`);
-      console.log(props.config);
-    }
+      },
+      { immediate: true }
+    );
 
     const store = useStore();
 

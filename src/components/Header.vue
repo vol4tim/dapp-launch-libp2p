@@ -1,9 +1,10 @@
 <template>
   <robo-layout-header
-    logoIcon="images/logo-white.png"
+    logoIcon="images/icon_white.svg"
     :navigation="navigation"
     :title="title"
     :version="version"
+    v-if="renderComponent"
   />
 </template>
 
@@ -22,6 +23,7 @@ export default {
   inject: ["RobonomicsProvider"],
   data() {
     return {
+      renderComponent: true,
       navigation: [
         {
           title: "Other",
@@ -80,6 +82,11 @@ export default {
               type: "external"
             },
             {
+              title: "Basilisk",
+              link: "https://app.basilisk.cloud/pools-and-farms",
+              type: "external"
+            },
+            {
               title: "Solarbeam",
               link: "https://analytics.solarbeam.io/pairs/0x5261e0ce96289e6c3a16da45a2e52d1ab1a0e9c3",
               type: "external"
@@ -116,6 +123,11 @@ export default {
         }
       },
       immediate: true
+    },
+    $route: async function () {
+      this.renderComponent = false;
+      await this.$nextTick();
+      this.renderComponent = true;
     }
   },
   async created() {
@@ -132,6 +144,9 @@ export default {
   },
   methods: {
     async handlerAccount(address) {
+      if (!this.RobonomicsProvider.isReady.value) {
+        return;
+      }
       if (this.unsubscribeBalance) {
         this.unsubscribeBalance();
       }
