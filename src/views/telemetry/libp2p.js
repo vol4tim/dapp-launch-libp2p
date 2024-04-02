@@ -128,10 +128,10 @@ export const useData = () => {
       );
       // commandCid = await ipfs.add(u8aToHex(cmdCrypto));
 
-      console.log(u8aToHex(cmdCrypto));
+      console.log({ data: u8aToHex(cmdCrypto) });
       console.log(command.launch);
 
-      const response = await request(u8aToHex(cmdCrypto));
+      const response = await request({ data: u8aToHex(cmdCrypto) });
       // const response = await request(command.launch);
       console.log(`response:`, response);
 
