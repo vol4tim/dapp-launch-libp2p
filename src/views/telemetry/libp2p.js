@@ -56,14 +56,12 @@ export const useData = () => {
         await node.unhandle("/update");
       }
       node.services.ha.handle("/update", async (dataRaw, stream) => {
-        console.log("dataRaw", dataRaw);
         const result = await decryptMsgContoller(
-          dataRaw,
+          dataRaw.data,
           controller.value,
           keyring
         );
         if (result) {
-          console.log("result", result);
           data.value = result;
           updateTime.value = Date.now();
           await node.services.ha.utils.sendResponse(stream, {
@@ -135,7 +133,7 @@ export const useData = () => {
 
       const response = await request(u8aToHex(cmdCrypto));
       // const response = await request(command.launch);
-      console.log(`response: ${response}`);
+      console.log(`response:`, response);
 
       setStatusLaunch(store, command, "success");
     } catch (error) {
