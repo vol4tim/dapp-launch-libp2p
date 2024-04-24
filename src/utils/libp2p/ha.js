@@ -60,7 +60,7 @@ export function createHa() {
               result += uint8ArrayToString(data.subarray());
             }
             try {
-              // stream.close();
+              stream.close();
               return JSON.parse(result);
             } catch (error) {
               return result;
