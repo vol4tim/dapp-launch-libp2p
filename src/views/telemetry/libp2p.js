@@ -105,7 +105,6 @@ export const useData = () => {
     }
 
     notify(store, `Launch command`);
-    console.log(`command ${JSON.stringify(command)}`);
 
     await setAccountController();
 
@@ -126,13 +125,8 @@ export const useData = () => {
         cmdString,
         controller.value.pair.publicKey
       );
-      // commandCid = await ipfs.add(u8aToHex(cmdCrypto));
-
-      console.log({ data: u8aToHex(cmdCrypto) });
-      console.log(command.launch);
 
       const response = await request({ data: u8aToHex(cmdCrypto) });
-      // const response = await request(command.launch);
       console.log(`response:`, response);
 
       setStatusLaunch(store, command, "success");

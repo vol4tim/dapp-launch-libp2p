@@ -61,6 +61,9 @@ function relay(peer_id) {
   return `/dns4/libp2p-relay.robonomics.network/tcp/443/wss/p2p/12D3KooWEmZfGh3HEy7rQPKZ8DpJRYfFcbULN97t3hGwkB5xPmjn/p2p-circuit/p2p/${peer_id}`;
   // return `/dns4/vol4.work.gd/tcp/443/wss/p2p/12D3KooWEmZfGh3HEy7rQPKZ8DpJRYfFcbULN97t3hGwkB5xPmjn/p2p-circuit/p2p/${result.peer_id}`
 }
+// export async function getUriPeer(peer_id) {
+//   return relay(peer_id);
+// }
 export async function getUriPeer(peer_id, peer_address) {
   if (peer_address) {
     const localMultiaddr = multiaddr(peer_address);
@@ -146,9 +149,9 @@ export async function disconnect() {
   connection = null;
 }
 
-export function request(data) {
+export function request(data, protocol = "/call") {
   if (node && connection) {
-    return node.services.ha.request(connection, "/call", data);
+    return node.services.ha.request(connection, protocol, data);
   }
   throw new Error("error");
 }
