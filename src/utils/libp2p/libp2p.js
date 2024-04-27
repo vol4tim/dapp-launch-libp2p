@@ -1,5 +1,4 @@
 import { noise } from "@chainsafe/libp2p-noise";
-import { yamux } from "@chainsafe/libp2p-yamux";
 import { circuitRelayTransport } from "@libp2p/circuit-relay-v2";
 import { identify } from "@libp2p/identify";
 import { mplex } from "@libp2p/mplex";
@@ -22,7 +21,7 @@ export async function createNode() {
       webRTC(),
       circuitRelayTransport()
     ],
-    streamMuxers: [yamux(), mplex()],
+    streamMuxers: [mplex()],
     connectionEncryption: [noise()],
     services: {
       identify: identify(),
