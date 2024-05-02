@@ -58,20 +58,18 @@ export function checkLocalUri(uri) {
   });
 }
 function relay(peer_id) {
-  return `/dns4/libp2p-relay-1.robonomics.network/tcp/443/wss/p2p/QmP2J72rQ6VHbQmmTJVvfTvHhVp8MVN7uahJF47u2odaFP/p2p-circuit/p2p/${peer_id}`;
-  // return `/dns4/libp2p-relaey.robonomics.network/tcp/443/wss/p2p/12D3KooWEmZfGh3HEy7rQPKZ8DpJRYfFcbULN97t3hGwkB5exPmjn/p2p-circuit/p2p/${peer_id}`;
+  return `/dns4/libp2p-relay-1.robonomics.network/tcp/443/wss/p2p/12D3KooWEMFXXvpZUjAuj1eKR11HuzZTCQ5HmYG9MNPtsnqPSERD/p2p-circuit/p2p/${peer_id}`;
+  // return `/dns4/libp2p-relay.robonomics.network/tcp/443/wss/p2p/12D3KooWEmZfGh3HEy7rQPKZ8DpJRYfFcbULN97t3hGwkB5xPmjn/p2p-circuit/p2p/${peer_id}`;
   // return `/dns4/vol4.work.gd/tcp/443/wss/p2p/12D3KooWEmZfGh3HEy7rQPKZ8DpJRYfFcbULN97t3hGwkB5xPmjn/p2p-circuit/p2p/${result.peer_id}`
 }
-// export async function getUriPeer(peer_id) {
-//   return relay(peer_id);
-// }
 export async function getUriPeer(peer_id, peer_address) {
-  if (peer_address) {
+  if (peer_address && window.location.protocol !== "https:") {
     const localMultiaddr = multiaddr(peer_address);
     const address = localMultiaddr.nodeAddress();
     if (localMultiaddr.protoNames().includes("ws")) {
       const wsUri = `ws://${address.address}:${address.port}`;
       try {
+        console.log("check wsUri", wsUri);
         await checkLocalUri(wsUri);
         return localMultiaddr;
       } catch (error) {
@@ -117,7 +115,7 @@ export async function start() {
         console.log("reconnect");
         reconnect(connection.remoteAddr.toString());
       }
-    }, 1000);
+    }, 10000);
   });
 
   return node;
@@ -128,11 +126,11 @@ export async function reconnect(addr) {
     await connect(addr);
   } catch (error) {
     console.log(error);
-    setTimeout(async () => {
-      if (addr && !connections.includes(addr)) {
-        await reconnect(addr);
-      }
-    }, 3000);
+    // setTimeout(async () => {
+    //   if (addr && !connections.includes(addr)) {
+    //     await reconnect(addr);
+    //   }
+    // }, 3000);
   }
 }
 
